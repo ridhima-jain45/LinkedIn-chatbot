@@ -3,16 +3,12 @@ from llama_index.core import Settings, VectorStoreIndex, Document, SimpleDirecto
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.experimental.query_engine import PandasQueryEngine
-# Try importing from the new dedicated agents package structure
-# NOTE: You must install 'llama-index-agents-react' first if this is the case:
-# pip install llama-index-agents-react
 from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 import streamlit as st
 import pandas
 import json
 import os
-# from prompt import * # <-- REMOVED: Definitions are now included below!
 import chromadb 
 
 # --- PROMPT DEFINITIONS (MOVED FROM prompt.py) ---
@@ -72,13 +68,11 @@ def get_api_key(file_name):
         st.error(f"Error: API key file '{file_name}' not found. Please create it.")
         return None
 
-# --- LLM and Settings Configuration ---
+
 api_key = get_api_key("key.txt")
 if not api_key:
-    # If API key is missing, stop script execution here
     st.stop()
-    
-# FIX 1: Use GoogleGenAI (the imported class) instead of the old 'Gemini'
+
 llm = GoogleGenAI(
     api_key=api_key,
     model_name="gemini-2.5-flash"  
@@ -103,7 +97,6 @@ profile_query_engine = PandasQueryEngine(
 )
 profile_query_engine.update_prompts({"pandas_prompt": new_prompt}) # Now accessible
     
-# --- Agent Tool Definitions ---
 tools = [
     QueryEngineTool(
         query_engine=profile_query_engine,
@@ -115,11 +108,8 @@ tools = [
             ),
         ),
     ),
-    # ... (other tools)
 ]
 
-# --- Initialize ReAct Agent ---
-# The ReActAgent.from_tools method is now called correctly after resolving the NameError
 agent = ReActAgent.from_tools(tools, llm=llm, verbose=True, context=context) # 'context' is now accessible
 
 
@@ -176,20 +166,16 @@ st.markdown("""
     </style> 
 """, unsafe_allow_html=True) 
 
-# Display Header and Title
 st.markdown('<img src="https://www.logo.wine/a/logo/LinkedIn/LinkedIn-Logo.wine.svg" class="image"/>', unsafe_allow_html=True)
 st.markdown('<div class="title">Job Profile Bot</div>', unsafe_allow_html=True) 
 st.markdown('<div class="description">Get information from LinkedIn profiles based on specific queries!</div>', unsafe_allow_html=True) 
 st.sidebar.header('Chat history:')
 
-# Initialize session state for history
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# User input for queries 
 prompt = st.text_area("Get employee information:", "", key="input", placeholder="Enter your requirements") 
 
-# Helper function to display structured DataFrame results
 def display_profile_info(profile_info): 
     # This helper is kept simple for now; agent output will typically be a string summary.
     if isinstance(profile_info, (dict, list)):
@@ -197,20 +183,16 @@ def display_profile_info(profile_info):
     else:
         st.write(profile_info)
 
-# --- Query Logic and History Management ---
 if prompt:  
     try:  
-        # Display user question
+        
         st.markdown(f'<div class="question">Your Question:</div> <div class="output">{prompt}</div>', unsafe_allow_html=True)  
- 
-        # Run the agent query
         with st.spinner('Thinking...'):
             result = agent.query(prompt)  
         
-        # Store the result in session history 
+
         st.session_state.history.append({"prompt": prompt, "result": result}) 
         
-        # Display response
         st.write('') 
         st.markdown('<div class="response">Response:</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="output">{result}</div>', unsafe_allow_html=True)
@@ -218,7 +200,6 @@ if prompt:
     except Exception as e:  
         st.error(f'<div class="error">An error occurred while processing your query: {str(e)}</div>', unsafe_allow_html=True)  
 
-# --- Sidebar History Display ---
 prompt_options = ["Select a question..."] + [entry['prompt'] for entry in st.session_state.history] 
 
 selected_prompt = st.sidebar.selectbox("Select a question to view the answer:", prompt_options) 
@@ -231,11 +212,11 @@ if selected_prompt != "Select a question...":
             # Display the associated result 
             st.sidebar.markdown("**Answer:**")
             
-            # Check the type of the result before displaying
             if isinstance(entry["result"], str): 
                 st.sidebar.markdown(entry['result']) 
             elif isinstance(entry["result"], (list, dict)): 
                 st.sidebar.json(entry["result"]) # JSON display for structured data 
             else: 
                 st.sidebar.markdown(str(entry['result'])) 
+
             break
